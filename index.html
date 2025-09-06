@@ -1,471 +1,581 @@
-<!DOCTYPE HTML>
-<!--
-	Paradigm Shift by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
-<html>
-	<head>
-		<title>Paradigm Shift by HTML5 UP</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<meta name="description" content="" />
-		<meta name="keywords" content="" />
-		<link rel="stylesheet" href="assets/css/main.css" />
-	</head>
-	<body class="is-preload">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Da Vinci Code Breaker - Multiplayer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cinzel', serif;
+            background-color: #1a1a1a;
+            color: #f3e5ab;
+            background-image: url('https://www.transparenttextures.com/patterns/old-wall.png');
+        }
+        .tile {
+            width: 50px;
+            height: 75px;
+            border: 2px solid #f3e5ab;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+        }
+        .tile.black { background-color: #333; color: #fff; border-color: #555; }
+        .tile.white { background-color: #f0e6d2; color: #333; border-color: #a09683; }
+        .tile.hidden {
+            background-color: #4a2c2a;
+            background-image:
+                linear-gradient(45deg, #3e2723 25%, transparent 25%),
+                linear-gradient(-45deg, #3e2723 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #3e2723 75%),
+                linear-gradient(-45deg, transparent 75%, #3e2723 75%);
+            background-size: 20px 20px;
+            border-color: #f3e5ab;
+        }
+        .tile.hidden .tile-content { display: none; }
+        .tile-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 85px; }
+        .selected-tile { transform: translateY(-10px); box-shadow: 0 10px 20px rgba(243, 229, 171, 0.4); border-color: #ffdf00; }
+        .player-area { border: 2px solid #c4a86a; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .current-turn { border-color: #ffdf00; box-shadow: 0 0 15px #ffdf00; }
+        .action-button, .lobby-button { background-color: #c4a86a; color: #2c1e1e; border: 2px solid #f3e5ab; transition: all 0.3s; }
+        .action-button:hover, .lobby-button:hover { background-color: #f3e5ab; color: #1a1a1a; }
+        .action-button:disabled { background-color: #555; color: #888; cursor: not-allowed; }
+        .input-field { background-color: #333; border: 1px solid #c4a86a; color: #f3e5ab; }
+        .modal { background-color: rgba(0,0,0,0.8); }
+        .modal-content { background-color: #1a1a1a; border: 2px solid #c4a86a; box-shadow: 0 0 20px #c4a86a; }
+        .clickable { cursor: pointer; }
+    </style>
+</head>
+<body class="min-h-screen p-4">
 
-		<!-- Wrapper -->
-			<div id="wrapper">
+    <!-- Lobby Screen -->
+    <div id="lobby-screen" class="w-full max-w-md mx-auto text-center p-8 rounded-xl shadow-2xl border-2 border-[#c4a86a]" style="background-color: rgba(0,0,0,0.4)">
+        <h1 class="text-4xl md:text-5xl font-bold mb-2 text-[#f3e5ab]">DA VINCI CODE</h1>
+        <p class="text-lg mb-6 text-[#c4a86a]">Multiplayer Lobby</p>
+        <p class="mb-4">Your User ID: <strong id="user-id-display" class="text-sm"></strong></p>
+        <div class="mb-4">
+            <button id="create-game-btn" class="lobby-button w-full py-2 px-6 rounded font-bold">Create New Game</button>
+        </div>
+        <div class="flex items-center gap-2">
+            <input type="text" id="game-id-input" placeholder="Enter Game ID to Join" class="input-field p-2 rounded w-full text-center">
+            <button id="join-game-btn" class="lobby-button py-2 px-6 rounded font-bold">Join</button>
+        </div>
+        <p id="lobby-error" class="text-red-500 mt-4 min-h-[1.5rem]"></p>
+    </div>
 
-				<!-- Intro -->
-					<section class="intro">
-						<header>
-							<h1>Paradigm Shift</h1>
-							<p>A free responsive site template designed by <a href="https://twitter.com/ajlkn">@ajlkn</a> / <a href="https://html5up.net">HTML5 UP</a></p>
-							<ul class="actions">
-								<li><a href="#first" class="arrow scrolly"><span class="label">Next</span></a></li>
-							</ul>
-						</header>
-						<div class="content">
-							<span class="image fill" data-position="center"><img src="images/pic01.jpg" alt="" /></span>
-						</div>
-					</section>
+    <!-- Game Screen -->
+    <div id="game-screen" class="w-full max-w-6xl mx-auto p-4 rounded-xl shadow-2xl border-2 border-[#c4a86a] hidden" style="background-color: rgba(0,0,0,0.4)">
+        <div class="text-center mb-4">
+            <h1 class="text-3xl font-bold text-[#f3e5ab]">DA VINCI CODE</h1>
+            <p class="text-sm text-[#c4a86a] clickable" id="game-id-share">Game ID: <strong id="game-id-display"></strong> (Click to copy)</p>
+            <p id="turn-display" class="text-xl font-bold mt-2 text-[#ffdf00]"></p>
+        </div>
 
-				<!-- Section -->
-					<section id="first">
-						<header>
-							<h2>Magna sed nullam nisl adipiscing</h2>
-						</header>
-						<div class="content">
-							<p><strong>Lorem ipsum dolor</strong> sit amet consectetur adipiscing elit. Duis dapibus rutrum facilisis. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Etiam tristique libero eu nibh porttitor amet fermentum. Nullam venenatis erat id vehicula ultrices sed ultricies condimentum. Magna sed etiam consequat, et lorem adipiscing sed nulla. Volutpat nisl et tempus et dolor libero, feugiat magna tempus, sed et lorem adipiscing.</p>
-							<span class="image main"><img src="images/pic02.jpg" alt="" /></span>
-						</div>
-					</section>
+        <div id="players-container" class="mb-4"></div>
 
-				<!-- Section -->
-					<section>
-						<header>
-							<h2>Feugiat consequat tempus ultrices</h2>
-						</header>
-						<div class="content">
-							<p><strong>Etiam tristique libero</strong> eu nibh porttitor amet fermentum. Nullam venenatis erat id vehicula ultrices sed ultricies condimentum.</p>
-							<ul class="feature-icons">
-								<li class="icon solid fa-laptop">Consequat tempus</li>
-								<li class="icon solid fa-bolt">Etiam adipiscing</li>
-								<li class="icon solid fa-signal">Libero nullam</li>
-								<li class="icon solid fa-cog">Blandit condimentum</li>
-								<li class="icon solid fa-map-marker-alt">Lorem ipsum dolor</li>
-								<li class="icon solid fa-code">Nibh amet venenatis</li>
-							</ul>
-							<p>Vehicula ultrices sed ultricies condimentum. Magna sed etiam consequat, et lorem adipiscing sed nulla. Volutpat nisl et tempus et dolor libero, feugiat magna tempus, sed et lorem adipiscing.</p>
-						</div>
-					</section>
+        <div id="controls-area" class="text-center p-4 border-t-2 border-[#c4a86a] hidden">
+             <div class="mb-4">
+                <h3 class="text-lg text-[#f3e5ab]">Your Drawn Tile</h3>
+                <div id="drawn-tile-area" class="tile-container mt-2"></div>
+             </div>
+             <div id="guess-area" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+                 <select id="color-guess" class="input-field p-2 rounded">
+                     <option value="black">Black</option>
+                     <option value="white">White</option>
+                 </select>
+                 <input type="number" id="number-guess" min="0" max="11" placeholder="Number (0-11)" class="input-field p-2 rounded w-40 text-center">
+                 <button id="guess-button" class="action-button py-2 px-6 rounded font-bold">GUESS</button>
+             </div>
+             <button id="end-turn-button" class="action-button py-2 px-6 rounded font-bold hidden">End Turn</button>
+             <p id="game-message" class="min-h-[1.5rem] text-lg mt-4 text-[#ffdf00]"></p>
+        </div>
+        <div id="waiting-area" class="text-center p-4">
+            <p class="text-xl">Waiting for players...</p>
+            <p class="text-sm mt-2">The host can start the game once at least 2 players have joined.</p>
+            <button id="start-game-button" class="action-button py-2 px-8 rounded font-bold mt-4 hidden">Start Game</button>
+        </div>
+    </div>
 
-				<!-- Section -->
-					<section>
-						<header>
-							<h2>Ultrices erat magna sed condimentum</h2>
-						</header>
-						<div class="content">
-							<p><strong>Integer mollis egestas</strong> nam maximus erat id euismod egestas. Pellentesque sapien ac quam. Lorem ipsum dolor sit nullam.</p>
+    <!-- Modal -->
+    <div id="modal" class="modal fixed inset-0 items-center justify-center hidden">
+        <div class="modal-content text-center p-8 rounded-lg max-w-sm mx-auto">
+            <h2 id="modal-title" class="text-4xl font-bold mb-4"></h2>
+            <p id="modal-message" class="text-lg mb-6"></p>
+            <button id="modal-restart-button" class="action-button py-2 px-8 rounded font-bold">Back to Lobby</button>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-							<!-- Section -->
-								<section>
-									<header>
-										<h3>Erat aliquam</h3>
-										<p>Vehicula ultrices dolor amet ultricies et condimentum. Magna sed etiam consequat, et lorem adipiscing sed dolor sit amet, consectetur amet do eiusmod tempor incididunt  ipsum suspendisse ultrices gravida.</p>
-									</header>
-									<div class="content">
-										<div class="gallery">
-											<a href="images/gallery/fulls/01.jpg" class="landscape"><img src="images/gallery/thumbs/01.jpg" alt="" /></a>
-											<a href="images/gallery/fulls/02.jpg"><img src="images/gallery/thumbs/02.jpg" alt="" /></a>
-											<a href="images/gallery/fulls/03.jpg"><img src="images/gallery/thumbs/03.jpg" alt="" /></a>
-											<a href="images/gallery/fulls/04.jpg" class="landscape"><img src="images/gallery/thumbs/04.jpg" alt="" /></a>
-										</div>
-									</div>
-								</section>
+        // --- GLOBAL VARS ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-							<!-- Section -->
-								<section>
-									<header>
-										<h3>Nisl consequat</h3>
-										<p>Aenean ornare velit lacus, ac varius enim ullamcorper eu. Proin aliquam sed facilisis ante interdum congue. Integer mollis, nisl amet convallis, porttitor magna ullamcorper, amet mauris. Ut magna finibus nisi nec lacinia ipsum maximus.</p>
-									</header>
-									<div class="content">
-										<div class="gallery">
-											<a href="images/gallery/fulls/05.jpg" class="landscape"><img src="images/gallery/thumbs/05.jpg" alt="" /></a>
-											<a href="images/gallery/fulls/06.jpg"><img src="images/gallery/thumbs/06.jpg" alt="" /></a>
-											<a href="images/gallery/fulls/07.jpg"><img src="images/gallery/thumbs/07.jpg" alt="" /></a>
-										</div>
-									</div>
-								</section>
+        let db, auth, userId, gameId, gameUnsubscribe, playerStatesUnsubscribe;
+        let localGameState = {};
+        let localPlayerStates = {};
+        let selectedTarget = { playerId: null, tileIndex: null };
 
-							<!-- Section -->
-								<section>
-									<header>
-										<h3>Lorem gravida</h3>
-										<p>Proin aliquam facilisis ante interdum. Sed nulla amet lorem feugiat tempus aenean ornare velit lacus, ac varius sed enim lorem ullamcorper dolore.  ac varius enim lorem ullamcorper dolore. Proin aliquam facilisis.</p>
-									</header>
-									<div class="content">
-										<div class="gallery">
-											<a href="images/gallery/fulls/08.jpg" class="portrait"><img src="images/gallery/thumbs/08.jpg" alt="" /></a>
-											<a href="images/gallery/fulls/09.jpg" class="portrait"><img src="images/gallery/thumbs/09.jpg" alt="" /></a>
-											<a href="images/gallery/fulls/10.jpg" class="landscape"><img src="images/gallery/thumbs/10.jpg" alt="" /></a>
-										</div>
-									</div>
-								</section>
+        // --- DOM ELEMENTS ---
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const modal = document.getElementById('modal');
+        const playersContainer = document.getElementById('players-container');
+        const controlsArea = document.getElementById('controls-area');
+        const waitingArea = document.getElementById('waiting-area');
+        
+        // --- INITIALIZATION ---
+        function init() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                handleAuthentication();
+            } catch (e) {
+                console.error("Firebase initialization failed:", e);
+                document.body.innerHTML = "Error initializing the application. Please check the console.";
+            }
+        }
+        
+        async function handleAuthentication() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    document.getElementById('user-id-display').textContent = userId;
+                } else {
+                    try {
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) {
+                        console.error("Sign-in failed:", error);
+                    }
+                }
+            });
+        }
+        
+        // --- UI MANAGEMENT ---
+        function showScreen(screenName) {
+            lobbyScreen.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            if (screenName === 'lobby') lobbyScreen.classList.remove('hidden');
+            if (screenName === 'game') gameScreen.classList.remove('hidden');
+        }
+        
+        function renderGame() {
+            if (!localGameState || !localGameState.players) return;
+            
+            const currentPlayer = localGameState.players[localGameState.currentPlayerIndex];
+            document.getElementById('game-id-display').textContent = gameId;
 
-						</div>
-					</section>
+            // Render game status (waiting, playing, finished)
+            if (localGameState.status === 'waiting') {
+                waitingArea.classList.remove('hidden');
+                controlsArea.classList.add('hidden');
+                document.getElementById('turn-display').textContent = 'Waiting for players...';
+                const isHost = localGameState.players[0]?.id === userId;
+                const canStart = localGameState.players.length >= 2;
+                const startButton = document.getElementById('start-game-button');
+                startButton.classList.toggle('hidden', !isHost);
+                startButton.disabled = !canStart;
+            } else if (localGameState.status === 'playing') {
+                waitingArea.classList.add('hidden');
+                const isMyTurn = currentPlayer.id === userId;
+                controlsArea.classList.toggle('hidden', !isMyTurn);
+                document.getElementById('turn-display').textContent = isMyTurn ? "It's Your Turn!" : `Waiting for ${currentPlayer.name}...`;
+                document.getElementById('game-message').textContent = localGameState.lastAction || '';
+                
+                // Render drawn tile if it's my turn
+                const myState = localPlayerStates[userId];
+                const drawnTileArea = document.getElementById('drawn-tile-area');
+                drawnTileArea.innerHTML = '';
+                if(isMyTurn && myState && myState.drawnTile) {
+                    drawnTileArea.appendChild(createTileElement(myState.drawnTile));
+                }
+                 document.getElementById('end-turn-button').classList.toggle('hidden', !(isMyTurn && myState && myState.hasGuessedCorrectly));
 
-				<!-- Section -->
-					<section>
-						<header>
-							<h2>Duis sed adpiscing veroeros amet</h2>
-						</header>
-						<div class="content">
-							<p><strong>Proin tempus feugiat</strong> sed varius enim lorem ullamcorper dolore aliquam aenean ornare velit lacus, ac varius enim lorem ullamcorper dolore.</p>
-							<ul class="actions">
-								<li><a href="#" class="button primary large">Get Started</a></li>
-								<li><a href="#" class="button large">Learn More</a></li>
-							</ul>
-						</div>
-					</section>
+            } else if (localGameState.status === 'finished') {
+                controlsArea.classList.add('hidden');
+                showModal(localGameState.winnerId === userId, localGameState.players.find(p => p.id === localGameState.winnerId)?.name);
+            }
 
-				<!-- Elements -->
-				<!--
-					<section>
-						<header>
-							<h2>Elements</h2>
-						</header>
-						<div class="content">
+            // Render all player areas
+            playersContainer.innerHTML = '';
+            localGameState.players.forEach(player => {
+                const playerState = localPlayerStates[player.id];
+                if (playerState) {
+                    const playerArea = createPlayerArea(player, playerState);
+                    playersContainer.appendChild(playerArea);
+                }
+            });
+        }
+        
+        function createPlayerArea(player, playerState) {
+            const isCurrentUser = player.id === userId;
+            const isCurrentTurn = localGameState.players[localGameState.currentPlayerIndex]?.id === player.id;
+            const area = document.createElement('div');
+            area.className = `player-area ${isCurrentTurn ? 'current-turn' : ''}`;
+            
+            let nameDisplay = player.name;
+            if (isCurrentUser) nameDisplay += " (You)";
+            if(player.hasLost) nameDisplay += " - ELIMINATED";
 
-							<section>
-								<header>
-									<h3>Text</h3>
-								</header>
-								<div class="content">
-									<p>This is <b>bold</b> and this is <strong>strong</strong>. This is <i>italic</i> and this is <em>emphasized</em>.
-									This is <sup>superscript</sup> text and this is <sub>subscript</sub> text.
-									This is <u>underlined</u> and this is code: <code>for (;;) { ... }</code>. Finally, <a href="#">this is a link</a>.</p>
-									<hr />
-									<h2>Heading Level 2</h2>
-									<h3>Heading Level 3</h3>
-									<h4>Heading Level 4</h4>
-									<h5>Heading Level 5</h5>
-									<hr />
-									<h5>Blockquote</h5>
-									<blockquote>Fringilla nisl. Donec accumsan interdum nisi, quis tincidunt felis sagittis eget tempus euismod. Vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan faucibus. Vestibulum ante ipsum primis in faucibus lorem ipsum dolor sit amet nullam adipiscing eu felis.</blockquote>
-									<h5>Preformatted</h5>
-									<pre><code>i = 0;
+            area.innerHTML = `<h3 class="text-xl mb-2 text-center">${nameDisplay}</h3>`;
 
-while (!deck.isInOrder()) {
-  print 'Iteration ' + i;
-  deck.shuffle();
-  i++;
-}
+            const tilesEl = document.createElement('div');
+            tilesEl.className = 'tile-container';
+            playerState.tiles.forEach((tile, index) => {
+                const tileEl = createTileElement(tile, isCurrentUser, player.id, index);
+                if (selectedTarget.playerId === player.id && selectedTarget.tileIndex === index) {
+                    tileEl.classList.add('selected-tile');
+                }
+                tilesEl.appendChild(tileEl);
+            });
+            area.appendChild(tilesEl);
+            return area;
+        }
+        
+        function createTileElement(tile, isPlayerOwner = true, targetPlayerId = null, tileIndex = null) {
+            const tileEl = document.createElement('div');
+            tileEl.classList.add('tile');
+            const isHidden = !isPlayerOwner && !tile.revealed;
 
-print 'Sorted in ' + i + ' iterations.';</code></pre>
-								</div>
-							</section>
+            if (isHidden) {
+                tileEl.classList.add('hidden');
+            } else {
+                tileEl.classList.add(tile.color);
+                if (tile.revealed && !isPlayerOwner) {
+                    tileEl.style.opacity = '0.7';
+                }
+            }
 
-							<section>
-								<header>
-									<h3>Lists</h3>
-								</header>
-								<div class="content">
+            const tileContent = document.createElement('span');
+            tileContent.classList.add('tile-content');
+            tileContent.textContent = tile.number;
+            tileEl.appendChild(tileContent);
+            
+            // Add click listener for guessing if it's an opponent's hidden tile and it's my turn
+            const isMyTurn = localGameState.players[localGameState.currentPlayerIndex]?.id === userId;
+            if(isMyTurn && !isPlayerOwner && !tile.revealed) {
+                tileEl.addEventListener('click', () => {
+                    selectedTarget = { playerId: targetPlayerId, tileIndex: tileIndex };
+                    renderGame(); // Re-render to show selection
+                });
+            }
 
-									<h4>Unordered</h4>
-									<ul>
-										<li>Dolor pulvinar etiam.</li>
-										<li>Sagittis adipiscing.</li>
-										<li>Felis enim feugiat.</li>
-									</ul>
+            return tileEl;
+        }
 
-									<h4>Alternate</h4>
-									<ul class="alt">
-										<li>Dolor pulvinar etiam.</li>
-										<li>Sagittis adipiscing.</li>
-										<li>Felis enim feugiat.</li>
-									</ul>
+        function showModal(isWin, winnerName) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.getElementById('modal-title').textContent = isWin ? "VICTORY!" : "DEFEAT!";
+            document.getElementById('modal-message').textContent = winnerName ? `${winnerName} has won the game!` : 'The game is over.';
+        }
 
-									<h4>Ordered</h4>
-									<ol>
-										<li>Dolor pulvinar etiam.</li>
-										<li>Etiam vel felis viverra.</li>
-										<li>Felis enim feugiat.</li>
-										<li>Dolor pulvinar etiam.</li>
-										<li>Etiam vel felis lorem.</li>
-										<li>Felis enim et feugiat.</li>
-									</ol>
-									<h4>Icons</h4>
-									<ul class="icons">
-										<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>
-										<li><a href="#" class="icon brands fa-facebook-f"><span class="label">Facebook</span></a></li>
-										<li><a href="#" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
-										<li><a href="#" class="icon brands fa-github"><span class="label">Github</span></a></li>
-									</ul>
+        // --- GAME LOGIC ---
+        const gameCollectionRef = () => collection(db, `/artifacts/${appId}/public/data/davinci_games`);
+        const gameDocRef = (id) => doc(db, `/artifacts/${appId}/public/data/davinci_games`, id);
+        const playerStatesCollectionRef = (id) => collection(db, `/artifacts/${appId}/public/data/davinci_games/${id}/playerStates`);
+        
+        async function createGame() {
+            if (!userId) {
+                document.getElementById('lobby-error').textContent = "Not authenticated yet. Please wait.";
+                return;
+            }
+            try {
+                const newGame = {
+                    status: 'waiting',
+                    players: [{ id: userId, name: `Player ${Math.floor(Math.random() * 1000)}`, hasLost: false }],
+                    currentPlayerIndex: 0,
+                    winnerId: null,
+                    deck: [],
+                    lastAction: 'Game created.'
+                };
+                const docRef = await addDoc(gameCollectionRef(), newGame);
+                await listenToGame(docRef.id);
+            } catch (e) {
+                console.error("Error creating game:", e);
+                document.getElementById('lobby-error').textContent = "Failed to create game.";
+            }
+        }
+        
+        async function joinGame() {
+            if (!userId) { return; }
+            const idToJoin = document.getElementById('game-id-input').value.trim();
+            if (!idToJoin) return;
 
-									<h4>Actions</h4>
-									<ul class="actions">
-										<li><a href="#" class="button primary">Default</a></li>
-										<li><a href="#" class="button">Default</a></li>
-									</ul>
-									<ul class="actions stacked">
-										<li><a href="#" class="button primary">Default</a></li>
-										<li><a href="#" class="button">Default</a></li>
-									</ul>
-								</div>
-							</section>
+            try {
+                const gameRef = gameDocRef(idToJoin);
+                const gameSnap = await getDoc(gameRef);
+                if (!gameSnap.exists()) {
+                    document.getElementById('lobby-error').textContent = "Game not found.";
+                    return;
+                }
+                const gameData = gameSnap.data();
+                if (gameData.status !== 'waiting') {
+                    document.getElementById('lobby-error').textContent = "Game has already started.";
+                    return;
+                }
+                if (gameData.players.find(p => p.id === userId)) {
+                    // Player is already in, just join
+                } else if (gameData.players.length < 4) {
+                    const newPlayer = { id: userId, name: `Player ${Math.floor(Math.random() * 1000)}`, hasLost: false };
+                    const updatedPlayers = [...gameData.players, newPlayer];
+                    await updateDoc(gameRef, { players: updatedPlayers });
+                } else {
+                    document.getElementById('lobby-error').textContent = "Game is full.";
+                    return;
+                }
+                await listenToGame(idToJoin);
+            } catch (e) {
+                console.error("Error joining game:", e);
+                document.getElementById('lobby-error').textContent = "Failed to join game.";
+            }
+        }
 
-							<section>
-								<header>
-									<h3>Table</h3>
-								</header>
-								<div class="content">
-									<h4>Default</h4>
-									<div class="table-wrapper">
-										<table>
-											<thead>
-												<tr>
-													<th>Name</th>
-													<th>Description</th>
-													<th>Price</th>
-												</tr>
-											</thead>
-											<tbody>
-												<tr>
-													<td>Item One</td>
-													<td>Ante turpis integer aliquet porttitor.</td>
-													<td>29.99</td>
-												</tr>
-												<tr>
-													<td>Item Two</td>
-													<td>Vis ac commodo adipiscing arcu aliquet.</td>
-													<td>19.99</td>
-												</tr>
-												<tr>
-													<td>Item Three</td>
-													<td> Morbi faucibus arcu accumsan lorem.</td>
-													<td>29.99</td>
-												</tr>
-												<tr>
-													<td>Item Four</td>
-													<td>Vitae integer tempus condimentum.</td>
-													<td>19.99</td>
-												</tr>
-												<tr>
-													<td>Item Five</td>
-													<td>Ante turpis integer aliquet porttitor.</td>
-													<td>29.99</td>
-												</tr>
-											</tbody>
-											<tfoot>
-												<tr>
-													<td colspan="2"></td>
-													<td>100.00</td>
-												</tr>
-											</tfoot>
-										</table>
-									</div>
+        function listenToGame(id) {
+            gameId = id;
+            if (gameUnsubscribe) gameUnsubscribe();
+            if (playerStatesUnsubscribe) playerStatesUnsubscribe();
 
-									<h4>Alternate</h4>
-									<div class="table-wrapper">
-										<table class="alt">
-											<thead>
-												<tr>
-													<th>Name</th>
-													<th>Description</th>
-													<th>Price</th>
-												</tr>
-											</thead>
-											<tbody>
-												<tr>
-													<td>Item One</td>
-													<td>Ante turpis integer aliquet porttitor.</td>
-													<td>29.99</td>
-												</tr>
-												<tr>
-													<td>Item Two</td>
-													<td>Vis ac commodo adipiscing arcu aliquet.</td>
-													<td>19.99</td>
-												</tr>
-												<tr>
-													<td>Item Three</td>
-													<td> Morbi faucibus arcu accumsan lorem.</td>
-													<td>29.99</td>
-												</tr>
-												<tr>
-													<td>Item Four</td>
-													<td>Vitae integer tempus condimentum.</td>
-													<td>19.99</td>
-												</tr>
-												<tr>
-													<td>Item Five</td>
-													<td>Ante turpis integer aliquet porttitor.</td>
-													<td>29.99</td>
-												</tr>
-											</tbody>
-											<tfoot>
-												<tr>
-													<td colspan="2"></td>
-													<td>100.00</td>
-												</tr>
-											</tfoot>
-										</table>
-									</div>
-								</div>
-							</section>
+            showScreen('game');
 
-							<section>
-								<header>
-									<h3>Buttons</h3>
-								</header>
-								<div class="content">
-									<ul class="actions">
-										<li><a href="#" class="button primary">Primary</a></li>
-										<li><a href="#" class="button">Default</a></li>
-									</ul>
-									<ul class="actions">
-										<li><a href="#" class="button large">Large</a></li>
-										<li><a href="#" class="button">Default</a></li>
-										<li><a href="#" class="button small">Small</a></li>
-									</ul>
-									<ul class="actions">
-										<li><a href="#" class="button primary icon solid fa-download">Icon</a></li>
-										<li><a href="#" class="button icon solid fa-download">Icon</a></li>
-									</ul>
-									<ul class="actions">
-										<li><span class="button primary disabled">Disabled</span></li>
-										<li><span class="button disabled">Disabled</span></li>
-									</ul>
-								</div>
-							</section>
+            gameUnsubscribe = onSnapshot(gameDocRef(gameId), (doc) => {
+                localGameState = doc.data();
+                renderGame();
+            });
 
-							<section>
-								<header>
-									<h3>Form</h3>
-								</header>
-								<div class="content">
-									<form method="post" action="#">
-										<div class="fields">
-											<div class="field half">
-												<label for="demo-name">Name</label>
-												<input type="text" name="demo-name" id="demo-name" value="" placeholder="Jane Doe" />
-											</div>
-											<div class="field half">
-												<label for="demo-email">Email</label>
-												<input type="email" name="demo-email" id="demo-email" value="" placeholder="jane@untitled.tld" />
-											</div>
-											<div class="field">
-												<label for="demo-category">Category</label>
-												<select name="demo-category" id="demo-category">
-													<option value="">-</option>
-													<option value="1">Manufacturing</option>
-													<option value="1">Shipping</option>
-													<option value="1">Administration</option>
-													<option value="1">Human Resources</option>
-												</select>
-											</div>
-											<div class="field half">
-												<input type="radio" id="demo-priority-low" name="demo-priority" checked>
-												<label for="demo-priority-low">Low</label>
-											</div>
-											<div class="field half">
-												<input type="radio" id="demo-priority-high" name="demo-priority">
-												<label for="demo-priority-high">High</label>
-											</div>
-											<div class="field half">
-												<input type="checkbox" id="demo-copy" name="demo-copy">
-												<label for="demo-copy">Email me a copy</label>
-											</div>
-											<div class="field half">
-												<input type="checkbox" id="demo-human" name="demo-human" checked>
-												<label for="demo-human">Not a robot</label>
-											</div>
-											<div class="field">
-												<label for="demo-message">Message</label>
-												<textarea name="demo-message" id="demo-message" placeholder="Enter your message" rows="6"></textarea>
-											</div>
-										</div>
-										<ul class="actions">
-											<li><input type="submit" value="Send Message" class="primary" /></li>
-											<li><input type="reset" value="Reset" /></li>
-										</ul>
-									</form>
-								</div>
-							</section>
+            playerStatesUnsubscribe = onSnapshot(playerStatesCollectionRef(gameId), (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    localPlayerStates[change.doc.id] = change.doc.data();
+                });
+                renderGame();
+            });
+        }
+        
+        async function handleStartGame() {
+            try {
+                const gameRef = gameDocRef(gameId);
+                const gameData = (await getDoc(gameRef)).data();
+                if (gameData.players[0].id !== userId) return; // Only host can start
+                
+                // 1. Create and shuffle deck
+                let newDeck = [];
+                for (let i = 0; i <= 11; i++) {
+                    newDeck.push({ color: 'black', number: i });
+                    newDeck.push({ color: 'white', number: i });
+                }
+                for (let i = newDeck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+                }
+                
+                // 2. Deal tiles
+                const batch = writeBatch(db);
+                gameData.players.forEach(player => {
+                    const playerTiles = [];
+                    for(let i=0; i<4; i++) {
+                        playerTiles.push(newDeck.pop());
+                    }
+                    playerTiles.sort((a,b) => a.number - b.number || (a.color === 'black' ? -1 : 1));
+                    const playerState = { tiles: playerTiles.map(t => ({...t, revealed: false})), drawnTile: null, hasGuessedCorrectly: false };
+                    batch.set(doc(playerStatesCollectionRef(gameId), player.id), playerState);
+                });
+                
+                // 3. Set first player's drawn tile
+                const firstPlayerStateRef = doc(playerStatesCollectionRef(gameId), gameData.players[0].id);
+                const firstDrawnTile = newDeck.pop();
+                batch.update(firstPlayerStateRef, { drawnTile: firstDrawnTile });
 
-						</div>
-					</section>
-				-->
+                // 4. Update game doc
+                batch.update(gameRef, { status: 'playing', deck: newDeck, currentPlayerIndex: 0, lastAction: 'Game has started!' });
 
-				<!-- Section -->
-					<section>
-						<header>
-							<h2>Get in touch</h2>
-						</header>
-						<div class="content">
-							<p><strong>Auctor commodo</strong> interdum et malesuada fames ac ante ipsum primis in faucibus. Pellentesque venenatis dolor imperdiet dolor mattis sagittis.</p>
-							<form>
-								<div class="fields">
-									<div class="field half">
-										<input type="text" name="name" id="name" placeholder="Name" />
-									</div>
-									<div class="field half">
-										<input type="email" name="email" id="email" placeholder="Email" />
-									</div>
-									<div class="field">
-										<textarea name="message" id="message" placeholder="Message" rows="7"></textarea>
-									</div>
-								</div>
-								<ul class="actions">
-									<li><input type="submit" value="Send Message" class="button primary" /></li>
-								</ul>
-							</form>
-						</div>
-						<footer>
-							<ul class="items">
-								<li>
-									<h3>Email</h3>
-									<a href="#">information@untitled.ext</a>
-								</li>
-								<li>
-									<h3>Phone</h3>
-									<a href="#">(000) 000-0000</a>
-								</li>
-								<li>
-									<h3>Address</h3>
-									<span>1234 Somewhere Road, Nashville, TN 00000</span>
-								</li>
-								<li>
-									<h3>Elsewhere</h3>
-									<ul class="icons">
-										<li><a href="#" class="icon brands fa-twitter"><span class="label">Twitter</span></a></li>
-										<li><a href="#" class="icon brands fa-facebook-f"><span class="label">Facebook</span></a></li>
-										<li><a href="#" class="icon brands fa-instagram"><span class="label">Instagram</span></a></li>
-										<li><a href="#" class="icon brands fa-linkedin-in"><span class="label">LinkedIn</span></a></li>
-										<li><a href="#" class="icon brands fa-github"><span class="label">GitHub</span></a></li>
-										<li><a href="#" class="icon brands fa-codepen"><span class="label">Codepen</span></a></li>
-									</ul>
-								</li>
-							</ul>
-						</footer>
-					</section>
+                await batch.commit();
 
-				<!-- Copyright -->
-					<div class="copyright">&copy; Untitled. All rights reserved. Design: <a href="https://html5up.net">HTML5 UP</a>.</div>
+            } catch (e) {
+                console.error("Error starting game:", e);
+            }
+        }
 
-			</div>
+        function tileSorter(a, b) {
+            if (a.number !== b.number) return a.number - b.number;
+            return a.color === 'black' ? -1 : 1;
+        }
 
-		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/jquery.scrolly.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
+        async function handleGuess() {
+             if (selectedTarget.playerId === null || selectedTarget.tileIndex === null) {
+                document.getElementById('game-message').textContent = "Select an opponent's tile to guess.";
+                return;
+            }
 
-	</body>
+            const color = document.getElementById('color-guess').value;
+            const number = parseInt(document.getElementById('number-guess').value);
+
+            if (isNaN(number)) {
+                document.getElementById('game-message').textContent = "Please enter a valid number.";
+                return;
+            }
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const gameRef = gameDocRef(gameId);
+                    const myPlayerStateRef = doc(playerStatesCollectionRef(gameId), userId);
+                    const targetPlayerStateRef = doc(playerStatesCollectionRef(gameId), selectedTarget.playerId);
+
+                    const gameDoc = await transaction.get(gameRef);
+                    const myPlayerStateDoc = await transaction.get(myPlayerStateRef);
+                    const targetPlayerStateDoc = await transaction.get(targetPlayerStateRef);
+
+                    if (!gameDoc.exists() || !myPlayerStateDoc.exists() || !targetPlayerStateDoc.exists()) {
+                        throw "Game or player state not found!";
+                    }
+
+                    const gameData = gameDoc.data();
+                    const myState = myPlayerStateDoc.data();
+                    const targetState = targetPlayerStateDoc.data();
+                    const targetTile = targetState.tiles[selectedTarget.tileIndex];
+
+                    if (targetTile.color === color && targetTile.number === number) { // Correct Guess
+                        targetState.tiles[selectedTarget.tileIndex].revealed = true;
+                        transaction.update(targetPlayerStateRef, { tiles: targetState.tiles });
+                        transaction.update(myPlayerStateRef, { hasGuessedCorrectly: true });
+                        transaction.update(gameRef, { lastAction: `${gameData.players.find(p => p.id === userId).name} guessed correctly!` });
+                    
+                    } else { // Incorrect Guess
+                        const drawnTile = myState.drawnTile;
+                        myState.tiles.push({ ...drawnTile, revealed: true });
+                        myState.tiles.sort(tileSorter);
+
+                        // Pass turn to next player
+                        const nextPlayer = getNextPlayer(gameData.players, gameData.currentPlayerIndex);
+                        const nextDrawnTile = gameData.deck.pop();
+
+                        transaction.update(myPlayerStateRef, { tiles: myState.tiles, drawnTile: null, hasGuessedCorrectly: false });
+                        transaction.update(gameRef, { 
+                            deck: gameData.deck, 
+                            currentPlayerIndex: nextPlayer.index, 
+                            lastAction: `${gameData.players.find(p => p.id === userId).name} guessed incorrectly!`
+                        });
+                        
+                        // Set drawn tile for next player
+                        const nextPlayerStateRef = doc(playerStatesCollectionRef(gameId), nextPlayer.player.id);
+                        transaction.update(nextPlayerStateRef, { drawnTile: nextDrawnTile });
+                    }
+
+                    // Check win/loss conditions
+                     handleGameEndChecks(transaction, gameRef, gameData, targetPlayerStateRef, targetState, selectedTarget.playerId);
+                });
+                 selectedTarget = { playerId: null, tileIndex: null };
+                 document.getElementById('number-guess').value = '';
+
+            } catch (e) {
+                console.error("Guess transaction failed: ", e);
+                document.getElementById('game-message').textContent = "An error occurred during your guess.";
+            }
+        }
+        
+        async function handleEndTurn() {
+             try {
+                await runTransaction(db, async (transaction) => {
+                    const gameRef = gameDocRef(gameId);
+                    const myPlayerStateRef = doc(playerStatesCollectionRef(gameId), userId);
+                    const gameDoc = await transaction.get(gameRef);
+                    const myPlayerStateDoc = await transaction.get(myPlayerStateRef);
+                    
+                    const gameData = gameDoc.data();
+                    const myState = myPlayerStateDoc.data();
+
+                    // Add drawn tile to hand secretly
+                    myState.tiles.push({ ...myState.drawnTile, revealed: false });
+                    myState.tiles.sort(tileSorter);
+
+                    // Pass turn
+                    const nextPlayer = getNextPlayer(gameData.players, gameData.currentPlayerIndex);
+                    const nextDrawnTile = gameData.deck.pop();
+                    
+                    transaction.update(myPlayerStateRef, { tiles: myState.tiles, drawnTile: null, hasGuessedCorrectly: false });
+                    transaction.update(gameRef, {
+                        deck: gameData.deck,
+                        currentPlayerIndex: nextPlayer.index,
+                        lastAction: `${gameData.players.find(p => p.id === userId).name} ended their turn.`
+                    });
+                     // Set drawn tile for next player
+                    const nextPlayerStateRef = doc(playerStatesCollectionRef(gameId), nextPlayer.player.id);
+                    transaction.update(nextPlayerStateRef, { drawnTile: nextDrawnTile });
+                });
+            } catch (e) {
+                console.error("End turn transaction failed: ", e);
+            }
+        }
+
+        function handleGameEndChecks(transaction, gameRef, gameData, targetPlayerStateRef, targetState, targetPlayerId) {
+             // Check if target player lost
+            const targetPlayerLost = targetState.tiles.every(t => t.revealed);
+            if(targetPlayerLost) {
+                const playerIndex = gameData.players.findIndex(p => p.id === targetPlayerId);
+                gameData.players[playerIndex].hasLost = true;
+                transaction.update(gameRef, { players: gameData.players });
+            }
+
+            const activePlayers = gameData.players.filter(p => !p.hasLost);
+            if (activePlayers.length === 1) {
+                transaction.update(gameRef, { status: 'finished', winnerId: activePlayers[0].id });
+            }
+        }
+
+        function getNextPlayer(players, currentIndex) {
+            let nextIndex = (currentIndex + 1) % players.length;
+            while (players[nextIndex].hasLost) {
+                nextIndex = (nextIndex + 1) % players.length;
+            }
+            return { player: players[nextIndex], index: nextIndex };
+        }
+
+        function backToLobby() {
+            if (gameUnsubscribe) gameUnsubscribe();
+            if (playerStatesUnsubscribe) playerStatesUnsubscribe();
+            gameId = null;
+            localGameState = {};
+            localPlayerStates = {};
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            showScreen('lobby');
+        }
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('create-game-btn').addEventListener('click', createGame);
+        document.getElementById('join-game-btn').addEventListener('click', joinGame);
+        document.getElementById('start-game-button').addEventListener('click', handleStartGame);
+        document.getElementById('guess-button').addEventListener('click', handleGuess);
+        document.getElementById('end-turn-button').addEventListener('click', handleEndTurn);
+        document.getElementById('modal-restart-button').addEventListener('click', backToLobby);
+        document.getElementById('game-id-share').addEventListener('click', () => {
+            navigator.clipboard.writeText(gameId).then(() => {
+                const display = document.getElementById('game-id-share');
+                const originalText = display.innerHTML;
+                display.innerHTML = 'Game ID: <strong>Copied!</strong>';
+                setTimeout(() => { display.innerHTML = originalText; }, 2000);
+            });
+        });
+
+        // --- START ---
+        init();
+
+    </script>
+</body>
 </html>
+
