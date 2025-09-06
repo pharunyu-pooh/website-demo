@@ -3,579 +3,493 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Da Vinci Code Breaker - Multiplayer</title>
+    <title>Da Vinci Code - Single Player</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Cinzel', serif;
-            background-color: #1a1a1a;
-            color: #f3e5ab;
-            background-image: url('https://www.transparenttextures.com/patterns/old-wall.png');
+            font-family: 'Cormorant Garamond', serif;
+            background-color: #f3eadd;
+            background-image:
+                linear-gradient(rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
         }
         .tile {
-            width: 50px;
-            height: 75px;
-            border: 2px solid #f3e5ab;
-            border-radius: 8px;
+            width: 60px;
+            height: 90px;
+            border: 2px solid #5a3a22;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            font-weight: 700;
+            border-radius: 8px;
             cursor: pointer;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            transform-style: preserve-3d;
         }
-        .tile.black { background-color: #333; color: #fff; border-color: #555; }
-        .tile.white { background-color: #f0e6d2; color: #333; border-color: #a09683; }
-        .tile.hidden {
-            background-color: #4a2c2a;
-            background-image:
-                linear-gradient(45deg, #3e2723 25%, transparent 25%),
-                linear-gradient(-45deg, #3e2723 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #3e2723 75%),
-                linear-gradient(-45deg, transparent 75%, #3e2723 75%);
-            background-size: 20px 20px;
-            border-color: #f3e5ab;
+        .tile-black {
+            background-color: #333;
+            color: #fff;
         }
-        .tile.hidden .tile-content { display: none; }
-        .tile-container { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 85px; }
-        .selected-tile { transform: translateY(-10px); box-shadow: 0 10px 20px rgba(243, 229, 171, 0.4); border-color: #ffdf00; }
-        .player-area { border: 2px solid #c4a86a; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
-        .current-turn { border-color: #ffdf00; box-shadow: 0 0 15px #ffdf00; }
-        .action-button, .lobby-button { background-color: #c4a86a; color: #2c1e1e; border: 2px solid #f3e5ab; transition: all 0.3s; }
-        .action-button:hover, .lobby-button:hover { background-color: #f3e5ab; color: #1a1a1a; }
-        .action-button:disabled { background-color: #555; color: #888; cursor: not-allowed; }
-        .input-field { background-color: #333; border: 1px solid #c4a86a; color: #f3e5ab; }
-        .modal { background-color: rgba(0,0,0,0.8); }
-        .modal-content { background-color: #1a1a1a; border: 2px solid #c4a86a; box-shadow: 0 0 20px #c4a86a; }
-        .clickable { cursor: pointer; }
+        .tile-white {
+            background-color: #f8f8f8;
+            color: #333;
+        }
+        .tile.hidden .tile-front {
+            transform: rotateY(180deg);
+        }
+        .tile.hidden .tile-back {
+            transform: rotateY(0deg);
+        }
+        .tile .tile-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; /* FIX: Ensures clicks register on the parent tile element */
+        }
+        .tile-front {
+           /* visible side */
+        }
+        .tile-back {
+            background-color: #5a3a22;
+            transform: rotateY(180deg);
+        }
+
+        .tile-placeholder {
+            border-style: dashed;
+        }
+        .player-hand, .opponent-hand {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center; /* Vertically align tiles */
+            padding: 20px;
+            min-height: 120px;
+            perspective: 1000px; /* FIX: Added perspective for 3D transforms to render correctly */
+        }
+        .game-board {
+            background-color: rgba(224, 208, 185, 0.8);
+            border: 3px solid #5a3a22;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), inset 0 0 10px rgba(0,0,0,0.1);
+            backdrop-filter: blur(5px);
+        }
+        .btn-action {
+            font-family: 'Cinzel', serif;
+            background-color: #8c6b52;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #5a3a22;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .btn-action:hover:not(:disabled) {
+            background-color: #735742;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .btn-action:disabled {
+            background-color: #ab9a8a;
+            cursor: not-allowed;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+        }
+        /* --- FIX --- Added .is-active class for robust modal display */
+        .modal.is-active {
+            display: flex;
+        }
+        .modal-content {
+            background-color: #f3eadd;
+            padding: 30px;
+            border: 4px solid #5a3a22;
+            width: 90%;
+            max-width: 450px;
+            border-radius: 10px;
+            text-align: center;
+            font-family: 'Cinzel', serif;
+        }
     </style>
 </head>
-<body class="min-h-screen p-4">
+<body class="bg-gray-200 flex items-center justify-center min-h-screen p-4">
 
-    <!-- Lobby Screen -->
-    <div id="lobby-screen" class="w-full max-w-md mx-auto text-center p-8 rounded-xl shadow-2xl border-2 border-[#c4a86a]" style="background-color: rgba(0,0,0,0.4)">
-        <h1 class="text-4xl md:text-5xl font-bold mb-2 text-[#f3e5ab]">DA VINCI CODE</h1>
-        <p class="text-lg mb-6 text-[#c4a86a]">Multiplayer Lobby</p>
-        <p class="mb-4">Your User ID: <strong id="user-id-display" class="text-sm"></strong></p>
-        <div class="mb-4">
-            <button id="create-game-btn" class="lobby-button w-full py-2 px-6 rounded font-bold">Create New Game</button>
+    <div id="game-container" class="w-full max-w-5xl mx-auto">
+
+        <!-- Game Board -->
+        <div class="game-board p-6 rounded-lg">
+            <!-- Opponent's Hand -->
+            <div class="mb-8">
+                <h2 class="text-2xl text-center font-bold text-[#5a3a22] mb-2 tracking-widest">COMPUTER'S TILES</h2>
+                <div id="opponent-hand" class="opponent-hand"></div>
+            </div>
+
+            <!-- Middle Section (Deck & Message) -->
+            <div class="flex flex-col items-center justify-center my-8 space-y-4">
+                <div id="deck" class="w-24 h-36 border-4 border-dashed border-[#8c6b52] rounded-lg flex flex-col items-center justify-center text-[#5a3a22]">
+                    <span class="font-bold text-lg">DECK</span>
+                    <span id="deck-count" class="text-xl font-cinzel">24</span>
+                </div>
+                <div id="message-log" class="text-center text-lg text-[#5a3a22] h-12 font-semibold">
+                    Welcome to Da Vinci Code!
+                </div>
+            </div>
+
+            <!-- Player's Hand -->
+            <div class="mt-8">
+                <h2 class="text-2xl text-center font-bold text-[#5a3a22] mb-2 tracking-widest">YOUR TILES</h2>
+                <div id="player-hand" class="player-hand"></div>
+            </div>
         </div>
-        <div class="flex items-center gap-2">
-            <input type="text" id="game-id-input" placeholder="Enter Game ID to Join" class="input-field p-2 rounded w-full text-center">
-            <button id="join-game-btn" class="lobby-button py-2 px-6 rounded font-bold">Join</button>
+
+        <!-- Action Buttons -->
+        <div id="action-buttons" class="flex justify-center mt-6 space-x-4">
+            <button id="draw-btn" class="btn-action">Draw a Tile</button>
+            <button id="end-turn-btn" class="btn-action" disabled>End Turn</button>
         </div>
-        <p id="lobby-error" class="text-red-500 mt-4 min-h-[1.5rem]"></p>
+
     </div>
 
-    <!-- Game Screen -->
-    <div id="game-screen" class="w-full max-w-6xl mx-auto p-4 rounded-xl shadow-2xl border-2 border-[#c4a86a] hidden" style="background-color: rgba(0,0,0,0.4)">
-        <div class="text-center mb-4">
-            <h1 class="text-3xl font-bold text-[#f3e5ab]">DA VINCI CODE</h1>
-            <p class="text-sm text-[#c4a86a] clickable" id="game-id-share">Game ID: <strong id="game-id-display"></strong> (Click to copy)</p>
-            <p id="turn-display" class="text-xl font-bold mt-2 text-[#ffdf00]"></p>
-        </div>
-
-        <div id="players-container" class="mb-4"></div>
-
-        <div id="controls-area" class="text-center p-4 border-t-2 border-[#c4a86a] hidden">
-             <div class="mb-4">
-                <h3 class="text-lg text-[#f3e5ab]">Your Drawn Tile</h3>
-                <div id="drawn-tile-area" class="tile-container mt-2"></div>
-             </div>
-             <div id="guess-area" class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
-                 <select id="color-guess" class="input-field p-2 rounded">
-                     <option value="black">Black</option>
-                     <option value="white">White</option>
-                 </select>
-                 <input type="number" id="number-guess" min="0" max="11" placeholder="Number (0-11)" class="input-field p-2 rounded w-40 text-center">
-                 <button id="guess-button" class="action-button py-2 px-6 rounded font-bold">GUESS</button>
-             </div>
-             <button id="end-turn-button" class="action-button py-2 px-6 rounded font-bold hidden">End Turn</button>
-             <p id="game-message" class="min-h-[1.5rem] text-lg mt-4 text-[#ffdf00]"></p>
-        </div>
-        <div id="waiting-area" class="text-center p-4">
-            <p class="text-xl">Waiting for players...</p>
-            <p class="text-sm mt-2">The host can start the game once at least 2 players have joined.</p>
-            <button id="start-game-button" class="action-button py-2 px-8 rounded font-bold mt-4 hidden">Start Game</button>
-        </div>
-    </div>
-
-    <!-- Modal -->
-    <div id="modal" class="modal fixed inset-0 items-center justify-center hidden">
-        <div class="modal-content text-center p-8 rounded-lg max-w-sm mx-auto">
-            <h2 id="modal-title" class="text-4xl font-bold mb-4"></h2>
-            <p id="modal-message" class="text-lg mb-6"></p>
-            <button id="modal-restart-button" class="action-button py-2 px-8 rounded font-bold">Back to Lobby</button>
+    <!-- Guessing Modal -->
+    <div id="guess-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl mb-4 text-[#5a3a22]">Guess the tile's number</h3>
+             <div id="guess-options" class="grid grid-cols-6 gap-2 mt-4">
+                 <!-- Number buttons will be inserted here -->
+            </div>
+            <button id="cancel-guess-btn" class="btn-action mt-6 bg-red-800 hover:bg-red-900 border-red-950">Cancel</button>
         </div>
     </div>
     
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2 id="game-over-message" class="text-3xl mb-6 text-[#5a3a22]"></h2>
+            <button id="restart-btn" class="btn-action">Play Again</button>
+        </div>
+    </div>
 
-        // --- GLOBAL VARS ---
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
 
-        let db, auth, userId, gameId, gameUnsubscribe, playerStatesUnsubscribe;
-        let localGameState = {};
-        let localPlayerStates = {};
-        let selectedTarget = { playerId: null, tileIndex: null };
+            const opponentHandEl = document.getElementById('opponent-hand');
+            const playerHandEl = document.getElementById('player-hand');
+            const deckCountEl = document.getElementById('deck-count');
+            const messageLogEl = document.getElementById('message-log');
+            const drawBtn = document.getElementById('draw-btn');
+            const endTurnBtn = document.getElementById('end-turn-btn');
+            const guessModal = document.getElementById('guess-modal');
+            const guessOptionsEl = document.getElementById('guess-options');
+            const cancelGuessBtn = document.getElementById('cancel-guess-btn');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const gameOverMessageEl = document.getElementById('game-over-message');
+            const restartBtn = document.getElementById('restart-btn');
 
-        // --- DOM ELEMENTS ---
-        const lobbyScreen = document.getElementById('lobby-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const modal = document.getElementById('modal');
-        const playersContainer = document.getElementById('players-container');
-        const controlsArea = document.getElementById('controls-area');
-        const waitingArea = document.getElementById('waiting-area');
-        
-        // --- INITIALIZATION ---
-        function init() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                handleAuthentication();
-            } catch (e) {
-                console.error("Firebase initialization failed:", e);
-                document.body.innerHTML = "Error initializing the application. Please check the console.";
-            }
-        }
-        
-        async function handleAuthentication() {
-            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    userId = user.uid;
-                    document.getElementById('user-id-display').textContent = userId;
-                } else {
-                    try {
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(auth, initialAuthToken);
-                        } else {
-                            await signInAnonymously(auth);
-                        }
-                    } catch (error) {
-                        console.error("Sign-in failed:", error);
-                    }
-                }
-            });
-        }
-        
-        // --- UI MANAGEMENT ---
-        function showScreen(screenName) {
-            lobbyScreen.classList.add('hidden');
-            gameScreen.classList.add('hidden');
-            if (screenName === 'lobby') lobbyScreen.classList.remove('hidden');
-            if (screenName === 'game') gameScreen.classList.remove('hidden');
-        }
-        
-        function renderGame() {
-            if (!localGameState || !localGameState.players) return;
-            
-            const currentPlayer = localGameState.players[localGameState.currentPlayerIndex];
-            document.getElementById('game-id-display').textContent = gameId;
+            let deck = [];
+            let playerHand = [];
+            let opponentHand = [];
+            let isPlayerTurn = true;
+            let playerHasDrawn = false;
+            let drawnTile = null;
+            let selectedOpponentTile = null;
 
-            // Render game status (waiting, playing, finished)
-            if (localGameState.status === 'waiting') {
-                waitingArea.classList.remove('hidden');
-                controlsArea.classList.add('hidden');
-                document.getElementById('turn-display').textContent = 'Waiting for players...';
-                const isHost = localGameState.players[0]?.id === userId;
-                const canStart = localGameState.players.length >= 2;
-                const startButton = document.getElementById('start-game-button');
-                startButton.classList.toggle('hidden', !isHost);
-                startButton.disabled = !canStart;
-            } else if (localGameState.status === 'playing') {
-                waitingArea.classList.add('hidden');
-                const isMyTurn = currentPlayer.id === userId;
-                controlsArea.classList.toggle('hidden', !isMyTurn);
-                document.getElementById('turn-display').textContent = isMyTurn ? "It's Your Turn!" : `Waiting for ${currentPlayer.name}...`;
-                document.getElementById('game-message').textContent = localGameState.lastAction || '';
-                
-                // Render drawn tile if it's my turn
-                const myState = localPlayerStates[userId];
-                const drawnTileArea = document.getElementById('drawn-tile-area');
-                drawnTileArea.innerHTML = '';
-                if(isMyTurn && myState && myState.drawnTile) {
-                    drawnTileArea.appendChild(createTileElement(myState.drawnTile));
-                }
-                 document.getElementById('end-turn-button').classList.toggle('hidden', !(isMyTurn && myState && myState.hasGuessedCorrectly));
-
-            } else if (localGameState.status === 'finished') {
-                controlsArea.classList.add('hidden');
-                showModal(localGameState.winnerId === userId, localGameState.players.find(p => p.id === localGameState.winnerId)?.name);
-            }
-
-            // Render all player areas
-            playersContainer.innerHTML = '';
-            localGameState.players.forEach(player => {
-                const playerState = localPlayerStates[player.id];
-                if (playerState) {
-                    const playerArea = createPlayerArea(player, playerState);
-                    playersContainer.appendChild(playerArea);
-                }
-            });
-        }
-        
-        function createPlayerArea(player, playerState) {
-            const isCurrentUser = player.id === userId;
-            const isCurrentTurn = localGameState.players[localGameState.currentPlayerIndex]?.id === player.id;
-            const area = document.createElement('div');
-            area.className = `player-area ${isCurrentTurn ? 'current-turn' : ''}`;
-            
-            let nameDisplay = player.name;
-            if (isCurrentUser) nameDisplay += " (You)";
-            if(player.hasLost) nameDisplay += " - ELIMINATED";
-
-            area.innerHTML = `<h3 class="text-xl mb-2 text-center">${nameDisplay}</h3>`;
-
-            const tilesEl = document.createElement('div');
-            tilesEl.className = 'tile-container';
-            playerState.tiles.forEach((tile, index) => {
-                const tileEl = createTileElement(tile, isCurrentUser, player.id, index);
-                if (selectedTarget.playerId === player.id && selectedTarget.tileIndex === index) {
-                    tileEl.classList.add('selected-tile');
-                }
-                tilesEl.appendChild(tileEl);
-            });
-            area.appendChild(tilesEl);
-            return area;
-        }
-        
-        function createTileElement(tile, isPlayerOwner = true, targetPlayerId = null, tileIndex = null) {
-            const tileEl = document.createElement('div');
-            tileEl.classList.add('tile');
-            const isHidden = !isPlayerOwner && !tile.revealed;
-
-            if (isHidden) {
-                tileEl.classList.add('hidden');
-            } else {
-                tileEl.classList.add(tile.color);
-                if (tile.revealed && !isPlayerOwner) {
-                    tileEl.style.opacity = '0.7';
-                }
-            }
-
-            const tileContent = document.createElement('span');
-            tileContent.classList.add('tile-content');
-            tileContent.textContent = tile.number;
-            tileEl.appendChild(tileContent);
-            
-            // Add click listener for guessing if it's an opponent's hidden tile and it's my turn
-            const isMyTurn = localGameState.players[localGameState.currentPlayerIndex]?.id === userId;
-            if(isMyTurn && !isPlayerOwner && !tile.revealed) {
-                tileEl.addEventListener('click', () => {
-                    selectedTarget = { playerId: targetPlayerId, tileIndex: tileIndex };
-                    renderGame(); // Re-render to show selection
-                });
-            }
-
-            return tileEl;
-        }
-
-        function showModal(isWin, winnerName) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.getElementById('modal-title').textContent = isWin ? "VICTORY!" : "DEFEAT!";
-            document.getElementById('modal-message').textContent = winnerName ? `${winnerName} has won the game!` : 'The game is over.';
-        }
-
-        // --- GAME LOGIC ---
-        const gameCollectionRef = () => collection(db, `/artifacts/${appId}/public/data/davinci_games`);
-        const gameDocRef = (id) => doc(db, `/artifacts/${appId}/public/data/davinci_games`, id);
-        const playerStatesCollectionRef = (id) => collection(db, `/artifacts/${appId}/public/data/davinci_games/${id}/playerStates`);
-        
-        async function createGame() {
-            if (!userId) {
-                document.getElementById('lobby-error').textContent = "Not authenticated yet. Please wait.";
-                return;
-            }
-            try {
-                const newGame = {
-                    status: 'waiting',
-                    players: [{ id: userId, name: `Player ${Math.floor(Math.random() * 1000)}`, hasLost: false }],
-                    currentPlayerIndex: 0,
-                    winnerId: null,
-                    deck: [],
-                    lastAction: 'Game created.'
-                };
-                const docRef = await addDoc(gameCollectionRef(), newGame);
-                await listenToGame(docRef.id);
-            } catch (e) {
-                console.error("Error creating game:", e);
-                document.getElementById('lobby-error').textContent = "Failed to create game.";
-            }
-        }
-        
-        async function joinGame() {
-            if (!userId) { return; }
-            const idToJoin = document.getElementById('game-id-input').value.trim();
-            if (!idToJoin) return;
-
-            try {
-                const gameRef = gameDocRef(idToJoin);
-                const gameSnap = await getDoc(gameRef);
-                if (!gameSnap.exists()) {
-                    document.getElementById('lobby-error').textContent = "Game not found.";
-                    return;
-                }
-                const gameData = gameSnap.data();
-                if (gameData.status !== 'waiting') {
-                    document.getElementById('lobby-error').textContent = "Game has already started.";
-                    return;
-                }
-                if (gameData.players.find(p => p.id === userId)) {
-                    // Player is already in, just join
-                } else if (gameData.players.length < 4) {
-                    const newPlayer = { id: userId, name: `Player ${Math.floor(Math.random() * 1000)}`, hasLost: false };
-                    const updatedPlayers = [...gameData.players, newPlayer];
-                    await updateDoc(gameRef, { players: updatedPlayers });
-                } else {
-                    document.getElementById('lobby-error').textContent = "Game is full.";
-                    return;
-                }
-                await listenToGame(idToJoin);
-            } catch (e) {
-                console.error("Error joining game:", e);
-                document.getElementById('lobby-error').textContent = "Failed to join game.";
-            }
-        }
-
-        function listenToGame(id) {
-            gameId = id;
-            if (gameUnsubscribe) gameUnsubscribe();
-            if (playerStatesUnsubscribe) playerStatesUnsubscribe();
-
-            showScreen('game');
-
-            gameUnsubscribe = onSnapshot(gameDocRef(gameId), (doc) => {
-                localGameState = doc.data();
-                renderGame();
-            });
-
-            playerStatesUnsubscribe = onSnapshot(playerStatesCollectionRef(gameId), (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    localPlayerStates[change.doc.id] = change.doc.data();
-                });
-                renderGame();
-            });
-        }
-        
-        async function handleStartGame() {
-            try {
-                const gameRef = gameDocRef(gameId);
-                const gameData = (await getDoc(gameRef)).data();
-                if (gameData.players[0].id !== userId) return; // Only host can start
-                
-                // 1. Create and shuffle deck
-                let newDeck = [];
+            function createDeck() {
+                const newDeck = [];
                 for (let i = 0; i <= 11; i++) {
-                    newDeck.push({ color: 'black', number: i });
-                    newDeck.push({ color: 'white', number: i });
+                    newDeck.push({ id: `b${i}`, value: i, color: 'black', revealed: false });
+                    newDeck.push({ id: `w${i}`, value: i, color: 'white', revealed: false });
                 }
-                for (let i = newDeck.length - 1; i > 0; i--) {
+                return newDeck;
+            }
+
+            function shuffleDeck(deckToShuffle) {
+                for (let i = deckToShuffle.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
-                    [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
+                    [deckToShuffle[i], deckToShuffle[j]] = [deckToShuffle[j], deckToShuffle[i]];
+                }
+            }
+            
+            function sortHand(hand) {
+                hand.sort((a, b) => a.value - b.value);
+            }
+
+            function drawTileFromDeck() {
+                return deck.length > 0 ? deck.pop() : null;
+            }
+
+            function setupGame() {
+                deck = createDeck();
+                shuffleDeck(deck);
+                playerHand = [];
+                opponentHand = [];
+                isPlayerTurn = true;
+                playerHasDrawn = false;
+                drawnTile = null;
+                selectedOpponentTile = null;
+
+                for(let i=0; i < 4; i++) {
+                    playerHand.push(drawTileFromDeck());
+                    opponentHand.push(drawTileFromDeck());
+                }
+                sortHand(playerHand);
+                sortHand(opponentHand);
+                
+                updateUI();
+                logMessage("Your turn. Please draw a tile.");
+                setButtonsForTurnStart();
+                gameOverModal.classList.remove('is-active');
+                closeGuessModal();
+            }
+            
+            function setButtonsForTurnStart() {
+                drawBtn.disabled = false;
+                endTurnBtn.disabled = true;
+            }
+
+            function setButtonsAfterDraw() {
+                drawBtn.disabled = true;
+                endTurnBtn.disabled = false;
+            }
+            
+            function setButtonsForOpponentTurn() {
+                drawBtn.disabled = true;
+                endTurnBtn.disabled = true;
+            }
+
+            function renderHand(hand, element, isOpponent) {
+                element.innerHTML = '';
+                hand.forEach((tile) => {
+                    const tileEl = document.createElement('div');
+                    tileEl.classList.add('tile', `tile-${tile.color}`);
+                    if (isOpponent && !tile.revealed) {
+                        tileEl.classList.add('hidden');
+                    }
+                    tileEl.dataset.id = tile.id;
+
+                    const frontFace = document.createElement('div');
+                    frontFace.classList.add('tile-face', 'tile-front');
+                    frontFace.textContent = tile.value;
+                    
+                    const backFace = document.createElement('div');
+                    backFace.classList.add('tile-face', 'tile-back');
+
+                    tileEl.appendChild(frontFace);
+                    tileEl.appendChild(backFace);
+                    
+                    if (isOpponent) {
+                        tileEl.addEventListener('click', () => handleOpponentTileClick(tile, tileEl));
+                    }
+                    
+                    element.appendChild(tileEl);
+                });
+            }
+
+            function updateUI() {
+                renderHand(playerHand, playerHandEl, false);
+                renderHand(opponentHand, opponentHandEl, true);
+                deckCountEl.textContent = deck.length;
+                checkGameOver();
+            }
+
+            function logMessage(msg) {
+                messageLogEl.textContent = msg;
+            }
+
+            function handleDrawTile() {
+                if (!isPlayerTurn || playerHasDrawn) return;
+
+                drawnTile = drawTileFromDeck();
+                if (drawnTile) {
+                    playerHand.push(drawnTile);
+                    sortHand(playerHand);
+                    logMessage(`You drew a ${drawnTile.color} tile. Click a computer tile to guess, or end your turn.`);
+                } else {
+                    logMessage("Deck is empty! You must make a guess.");
+                }
+                playerHasDrawn = true;
+                updateUI();
+                setButtonsAfterDraw();
+            }
+            
+            function handleOpponentTileClick(tile, tileEl) {
+                if (!isPlayerTurn || !playerHasDrawn) {
+                    logMessage("You must draw a tile before you can make a guess.");
+                    return;
+                }
+                if (tile.revealed) {
+                    logMessage("This tile is already revealed. Choose another.");
+                    return;
                 }
                 
-                // 2. Deal tiles
-                const batch = writeBatch(db);
-                gameData.players.forEach(player => {
-                    const playerTiles = [];
-                    for(let i=0; i<4; i++) {
-                        playerTiles.push(newDeck.pop());
-                    }
-                    playerTiles.sort((a,b) => a.number - b.number || (a.color === 'black' ? -1 : 1));
-                    const playerState = { tiles: playerTiles.map(t => ({...t, revealed: false})), drawnTile: null, hasGuessedCorrectly: false };
-                    batch.set(doc(playerStatesCollectionRef(gameId), player.id), playerState);
-                });
+                if (selectedOpponentTile) { // Deselect previous
+                    selectedOpponentTile.element.style.transform = '';
+                    selectedOpponentTile.element.style.borderColor = '#5a3a22';
+                }
+
+                selectedOpponentTile = { tile, element: tileEl };
+                tileEl.style.transform = 'translateY(-10px) scale(1.05)';
+                tileEl.style.borderColor = '#f59e0b';
                 
-                // 3. Set first player's drawn tile
-                const firstPlayerStateRef = doc(playerStatesCollectionRef(gameId), gameData.players[0].id);
-                const firstDrawnTile = newDeck.pop();
-                batch.update(firstPlayerStateRef, { drawnTile: firstDrawnTile });
-
-                // 4. Update game doc
-                batch.update(gameRef, { status: 'playing', deck: newDeck, currentPlayerIndex: 0, lastAction: 'Game has started!' });
-
-                await batch.commit();
-
-            } catch (e) {
-                console.error("Error starting game:", e);
+                openGuessModal();
             }
-        }
-
-        function tileSorter(a, b) {
-            if (a.number !== b.number) return a.number - b.number;
-            return a.color === 'black' ? -1 : 1;
-        }
-
-        async function handleGuess() {
-             if (selectedTarget.playerId === null || selectedTarget.tileIndex === null) {
-                document.getElementById('game-message').textContent = "Select an opponent's tile to guess.";
-                return;
+            
+            function openGuessModal() {
+                guessOptionsEl.innerHTML = '';
+                for (let i = 0; i <= 11; i++) {
+                    const btn = document.createElement('button');
+                    btn.textContent = i;
+                    btn.classList.add('btn-action', 'bg-gray-600', 'hover:bg-gray-700');
+                    btn.onclick = () => makeGuess(i);
+                    guessOptionsEl.appendChild(btn);
+                }
+                // --- FIX --- Switched to using a class for robust display
+                guessModal.classList.add('is-active');
             }
-
-            const color = document.getElementById('color-guess').value;
-            const number = parseInt(document.getElementById('number-guess').value);
-
-            if (isNaN(number)) {
-                document.getElementById('game-message').textContent = "Please enter a valid number.";
-                return;
+            
+            function closeGuessModal() {
+                 if (selectedOpponentTile) {
+                    selectedOpponentTile.element.style.transform = '';
+                    selectedOpponentTile.element.style.borderColor = '#5a3a22';
+                    selectedOpponentTile = null;
+                }
+                // --- FIX --- Switched to using a class for robust display
+                guessModal.classList.remove('is-active');
             }
 
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const gameRef = gameDocRef(gameId);
-                    const myPlayerStateRef = doc(playerStatesCollectionRef(gameId), userId);
-                    const targetPlayerStateRef = doc(playerStatesCollectionRef(gameId), selectedTarget.playerId);
+            function makeGuess(guessedValue) {
+                if (!selectedOpponentTile) return;
 
-                    const gameDoc = await transaction.get(gameRef);
-                    const myPlayerStateDoc = await transaction.get(myPlayerStateRef);
-                    const targetPlayerStateDoc = await transaction.get(targetPlayerStateRef);
+                const { tile, element } = selectedOpponentTile;
+                
+                closeGuessModal();
 
-                    if (!gameDoc.exists() || !myPlayerStateDoc.exists() || !targetPlayerStateDoc.exists()) {
-                        throw "Game or player state not found!";
+                if (tile.value === guessedValue) {
+                    logMessage(`Correct! It was a ${tile.value}. Guess another tile or end your turn.`);
+                    tile.revealed = true;
+                    element.classList.remove('hidden');
+                } else {
+                    logMessage(`Incorrect. Your drawn tile is revealed.`);
+                    if(drawnTile){
+                       drawnTile.revealed = true;
                     }
+                    endTurn();
+                }
+                updateUI();
+            }
+            
+            function endTurn() {
+                if(!isPlayerTurn) return;
+                
+                drawnTile = null;
+                playerHasDrawn = false;
+                isPlayerTurn = false;
+                logMessage("Computer's turn...");
+                setButtonsForOpponentTurn();
+                
+                setTimeout(computerTurn, 2000);
+            }
 
-                    const gameData = gameDoc.data();
-                    const myState = myPlayerStateDoc.data();
-                    const targetState = targetPlayerStateDoc.data();
-                    const targetTile = targetState.tiles[selectedTarget.tileIndex];
+            function computerTurn() {
+                if (isPlayerTurn) return;
 
-                    if (targetTile.color === color && targetTile.number === number) { // Correct Guess
-                        targetState.tiles[selectedTarget.tileIndex].revealed = true;
-                        transaction.update(targetPlayerStateRef, { tiles: targetState.tiles });
-                        transaction.update(myPlayerStateRef, { hasGuessedCorrectly: true });
-                        transaction.update(gameRef, { lastAction: `${gameData.players.find(p => p.id === userId).name} guessed correctly!` });
-                    
-                    } else { // Incorrect Guess
-                        const drawnTile = myState.drawnTile;
-                        myState.tiles.push({ ...drawnTile, revealed: true });
-                        myState.tiles.sort(tileSorter);
-
-                        // Pass turn to next player
-                        const nextPlayer = getNextPlayer(gameData.players, gameData.currentPlayerIndex);
-                        const nextDrawnTile = gameData.deck.pop();
-
-                        transaction.update(myPlayerStateRef, { tiles: myState.tiles, drawnTile: null, hasGuessedCorrectly: false });
-                        transaction.update(gameRef, { 
-                            deck: gameData.deck, 
-                            currentPlayerIndex: nextPlayer.index, 
-                            lastAction: `${gameData.players.find(p => p.id === userId).name} guessed incorrectly!`
-                        });
+                const compDrawnTile = drawTileFromDeck();
+                if (compDrawnTile) {
+                    opponentHand.push(compDrawnTile);
+                    sortHand(opponentHand);
+                    logMessage("Computer drew a tile.");
+                    updateUI();
+                } else {
+                    logMessage("Computer has no tile to draw.");
+                }
+                
+                setTimeout(() => {
+                    const targetableTiles = playerHand.filter(t => !t.revealed);
+                    if (targetableTiles.length > 0) {
+                        const targetTile = targetableTiles[Math.floor(Math.random() * targetableTiles.length)];
+                        const guess = Math.floor(Math.random() * 12);
+                        logMessage(`Computer guesses your tile is a ${guess}.`);
                         
-                        // Set drawn tile for next player
-                        const nextPlayerStateRef = doc(playerStatesCollectionRef(gameId), nextPlayer.player.id);
-                        transaction.update(nextPlayerStateRef, { drawnTile: nextDrawnTile });
+                        setTimeout(() => {
+                            if (targetTile.value === guess) {
+                                logMessage(`Computer guessed correctly! It was a ${targetTile.value}.`);
+                                targetTile.revealed = true;
+                                updateUI();
+                                setTimeout(computerTurn, 2000);
+                            } else {
+                                logMessage(`Computer guessed incorrectly.`);
+                                if(compDrawnTile) {
+                                    compDrawnTile.revealed = true;
+                                }
+                                setTimeout(endComputerTurn, 2000);
+                            }
+                        }, 2000);
+                    } else {
+                         endComputerTurn();
                     }
-
-                    // Check win/loss conditions
-                     handleGameEndChecks(transaction, gameRef, gameData, targetPlayerStateRef, targetState, selectedTarget.playerId);
-                });
-                 selectedTarget = { playerId: null, tileIndex: null };
-                 document.getElementById('number-guess').value = '';
-
-            } catch (e) {
-                console.error("Guess transaction failed: ", e);
-                document.getElementById('game-message').textContent = "An error occurred during your guess.";
-            }
-        }
-        
-        async function handleEndTurn() {
-             try {
-                await runTransaction(db, async (transaction) => {
-                    const gameRef = gameDocRef(gameId);
-                    const myPlayerStateRef = doc(playerStatesCollectionRef(gameId), userId);
-                    const gameDoc = await transaction.get(gameRef);
-                    const myPlayerStateDoc = await transaction.get(myPlayerStateRef);
-                    
-                    const gameData = gameDoc.data();
-                    const myState = myPlayerStateDoc.data();
-
-                    // Add drawn tile to hand secretly
-                    myState.tiles.push({ ...myState.drawnTile, revealed: false });
-                    myState.tiles.sort(tileSorter);
-
-                    // Pass turn
-                    const nextPlayer = getNextPlayer(gameData.players, gameData.currentPlayerIndex);
-                    const nextDrawnTile = gameData.deck.pop();
-                    
-                    transaction.update(myPlayerStateRef, { tiles: myState.tiles, drawnTile: null, hasGuessedCorrectly: false });
-                    transaction.update(gameRef, {
-                        deck: gameData.deck,
-                        currentPlayerIndex: nextPlayer.index,
-                        lastAction: `${gameData.players.find(p => p.id === userId).name} ended their turn.`
-                    });
-                     // Set drawn tile for next player
-                    const nextPlayerStateRef = doc(playerStatesCollectionRef(gameId), nextPlayer.player.id);
-                    transaction.update(nextPlayerStateRef, { drawnTile: nextDrawnTile });
-                });
-            } catch (e) {
-                console.error("End turn transaction failed: ", e);
-            }
-        }
-
-        function handleGameEndChecks(transaction, gameRef, gameData, targetPlayerStateRef, targetState, targetPlayerId) {
-             // Check if target player lost
-            const targetPlayerLost = targetState.tiles.every(t => t.revealed);
-            if(targetPlayerLost) {
-                const playerIndex = gameData.players.findIndex(p => p.id === targetPlayerId);
-                gameData.players[playerIndex].hasLost = true;
-                transaction.update(gameRef, { players: gameData.players });
+                }, 2000);
             }
 
-            const activePlayers = gameData.players.filter(p => !p.hasLost);
-            if (activePlayers.length === 1) {
-                transaction.update(gameRef, { status: 'finished', winnerId: activePlayers[0].id });
+            function endComputerTurn() {
+                isPlayerTurn = true;
+                if(checkGameOver()) return;
+                logMessage("Your turn. Please draw a tile.");
+                setButtonsForTurnStart();
+                updateUI();
             }
-        }
 
-        function getNextPlayer(players, currentIndex) {
-            let nextIndex = (currentIndex + 1) % players.length;
-            while (players[nextIndex].hasLost) {
-                nextIndex = (nextIndex + 1) % players.length;
+            function checkGameOver() {
+                const unrevealedPlayerTiles = playerHand.filter(t => !t.revealed).length;
+                const unrevealedOpponentTiles = opponentHand.filter(t => !t.revealed).length;
+
+                if (playerHand.length > 0 && unrevealedPlayerTiles === 0) {
+                    showGameOver("Computer Wins!");
+                    return true;
+                }
+                if (opponentHand.length > 0 && unrevealedOpponentTiles === 0) {
+                    showGameOver("You Win!");
+                    return true;
+                }
+                return false;
             }
-            return { player: players[nextIndex], index: nextIndex };
-        }
+            
+            function showGameOver(message) {
+                gameOverMessageEl.textContent = message;
+                // --- FIX --- Switched to using a class for robust display
+                gameOverModal.classList.add('is-active');
+                setButtonsForOpponentTurn();
+            }
 
-        function backToLobby() {
-            if (gameUnsubscribe) gameUnsubscribe();
-            if (playerStatesUnsubscribe) playerStatesUnsubscribe();
-            gameId = null;
-            localGameState = {};
-            localPlayerStates = {};
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            showScreen('lobby');
-        }
+            drawBtn.addEventListener('click', handleDrawTile);
+            endTurnBtn.addEventListener('click', endTurn);
+            cancelGuessBtn.addEventListener('click', closeGuessModal);
+            restartBtn.addEventListener('click', setupGame);
 
-        // --- EVENT LISTENERS ---
-        document.getElementById('create-game-btn').addEventListener('click', createGame);
-        document.getElementById('join-game-btn').addEventListener('click', joinGame);
-        document.getElementById('start-game-button').addEventListener('click', handleStartGame);
-        document.getElementById('guess-button').addEventListener('click', handleGuess);
-        document.getElementById('end-turn-button').addEventListener('click', handleEndTurn);
-        document.getElementById('modal-restart-button').addEventListener('click', backToLobby);
-        document.getElementById('game-id-share').addEventListener('click', () => {
-            navigator.clipboard.writeText(gameId).then(() => {
-                const display = document.getElementById('game-id-share');
-                const originalText = display.innerHTML;
-                display.innerHTML = 'Game ID: <strong>Copied!</strong>';
-                setTimeout(() => { display.innerHTML = originalText; }, 2000);
-            });
+            setupGame();
         });
-
-        // --- START ---
-        init();
-
     </script>
+
 </body>
 </html>
+
+
 
